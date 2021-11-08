@@ -15,10 +15,21 @@ main.tf
 module "helm_release" {
   source = "git@github.com:jangjaelee/terraform-helm-release.git"
 
-  cluster_name = local.cluster_name 
+  cluster_name     = local.cluster_name
+  name             = var.name
+  create_namespace = var.create_namespace
+  namespace        = var.namespace
+  chart_url        = var.chart_url
+  chart_name       = var.chart_name
+  chart_version    = var.chart_version
 
+  set_values           = var.set_values
+  set_sensitive_values = var.set_sensitive_values
 
-  env = "dev"
+  cluster_endpoint = var.cluster_endpoint
+  cluster_ca_cert  = var.cluster_ca_cert
+
+  env = var.env
 }
 ```
 
@@ -34,7 +45,6 @@ locals {
 providers.tf
 ```hcl
 provider "aws" {
-  version = ">= 3.2.0"
   region = var.region
   allowed_account_ids = var.account_id
   profile = "eks_service"
@@ -46,7 +56,7 @@ provider "helm" {
     cluster_ca_certificate = base64decode(var.cluster_ca_cert)
     exec {
       api_version = "client.authentication.k8s.io/v1alpha1"
-      args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
+      args        = ["eks", "get-token", "--cluster-name", local.cluster_name]
       command     = "aws"
     }
   }
@@ -56,7 +66,7 @@ provider "helm" {
 terraform.tf
 ```hcl
 terraform {
-  required_version = ">= 0.13.0"
+  required_version = ">= 1.0.0"
 
   backend "s3" {
     bucket = "kubesphere-terraform-state-backend"
@@ -65,6 +75,18 @@ terraform {
     dynamodb_table = "kubesphere-terraform-state-locks"
     encrypt = true
     profile = "eks_service"
+  }
+
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = ">= 3.50.0"
+    }
+
+    helm = {
+      source = "hashicorp/helm"
+      version = ">= 2.2.0"
+    }
   }
 }
 ```
@@ -82,4 +104,51 @@ variable "account_id" {
   type        = list(string)
   default     = ["123456789012"]
 }
+
+variable "name" {}
+variable "create_namespace" {}
+variable "namespace" {}
+variable "chart_url" {}
+variable "chart_name" {}
+variable "chart_version" {}
+variable "set_values" {}
+variable "set_sensitive_values" {}
+variable "cluster_endpoint" {}
+variable "cluster_ca_cert" {}
+variable "env" {}
+```
+
+terraform.tfvars
+```hcl
+ame                  = "aws-load-balancer-controller"
+create_namespace      = false
+namespace             = "kube-system"
+chart_url             = "https://aws.github.io/eks-charts"
+chart_name            = "aws-load-balancer-controller"
+chart_version         = "1.3.2"
+
+set_values = [{
+    name  = "clusterName"
+    value = "KubeSphere-v121-dev"
+    type  = "string"
+},{
+    name  = "serviceAccount.create"
+    value = false
+    type  = "auto"
+},{
+    name  = "serviceAccount.name"
+    value = "aws-load-balancer-controller"
+    type  = "string"
+}]
+
+set_sensitive_values = [{
+    name  = ""
+    value = ""
+    type  = "auto"
+}]
+
+cluster_endpoint = "https://cluster.kubesphere.kr"
+cluster_ca_cert  = "29obGQwTkpqbzB6dEwvZ05WeC9kCm5rSG11YjZ2NUNldXhVTjdaR0U2d1NqeU04MVNvc2hDdlFLWAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="
+
+env = "dev"
 ```
