@@ -120,7 +120,7 @@ variable "env" {}
 
 terraform.tfvars
 ```hcl
-ame                  = "aws-load-balancer-controller"
+name                  = "aws-load-balancer-controller"
 create_namespace      = false
 namespace             = "kube-system"
 chart_url             = "https://aws.github.io/eks-charts"
